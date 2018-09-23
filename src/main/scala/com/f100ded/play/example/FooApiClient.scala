@@ -4,7 +4,7 @@ import com.f100ded.play.example.model.Bar
 
 import scala.concurrent.Future
 
-trait FooApi {
+trait FooApiClient {
   def getAllBars: Future[Seq[Bar]]
 
   def getBar(id: Int): Future[Option[Bar]]
