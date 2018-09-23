@@ -15,7 +15,7 @@ import scala.language.reflectiveCalls
 /**
   * Tests FooApi HTTP client implementation
   */
-class WsFooApiClientSpec extends AsyncFunSuite with BeforeAndAfterAll with Matchers {
+class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Matchers {
 
   implicit val system: ActorSystem = ActorSystem()
 
