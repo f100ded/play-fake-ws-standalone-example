@@ -6,6 +6,7 @@ import com.f100ded.play.example.model.Bar
 import org.f100ded.play.fakews._
 import org.scalatest._
 import play.api.libs.json.Json
+import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.JsonBodyWritables._
 
 import scala.concurrent._
@@ -29,7 +30,7 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
 
   private val accessToken = "fake_access_token"
 
-  test("getBar: regular case") {
+  test("getBar: normal flow") {
     val ws = StandaloneFakeWSClient {
       case request@GET(url"http://host/bars/$id") =>
         id shouldBe "1"
@@ -43,7 +44,7 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
     }
   }
 
-  test("getBar: 404") {
+  test("getBar: gracefully handle 404") {
     val ws = StandaloneFakeWSClient {
       case GET(url"""http://host/bars/[\d]+""") =>
         NotFound
@@ -55,15 +56,25 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
     }
   }
 
-  test("getBar: unexpected code") {
+  test("getBar: gracefully handle unexpected status") {
     val ws = StandaloneFakeWSClient(InternalServerError)
     val api = new WsFooApiClient(ws, baseUrl, accessToken)
-    recoverToSucceededIf[FooApiClientException] {
-      api.getBar(1)
+    api.getBar(1).failed.map {
+      case e: FooApiClientException =>
+        e.status shouldBe 500
     }
   }
 
-  test("getAllBars: regular case") {
+  test("getBar: gracefully handle unexpected response body") {
+    val ws = StandaloneFakeWSClient(Ok("This should not be here"))
+    val api = new WsFooApiClient(ws, baseUrl, accessToken)
+    api.getBar(1).failed.map {
+      case e: FooApiClientException =>
+        e.status shouldBe 200
+    }
+  }
+
+  test("getAllBars: normal flow") {
     val ws = StandaloneFakeWSClient {
       case request@GET(url"http://host/bars") =>
         request.headers should contain("Authorization" -> Seq(s"Bearer $accessToken"))
@@ -76,7 +87,7 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
     }
   }
 
-  test("getAllBars: unexpected code") {
+  test("getAllBars: gracefully handle unexpected status") {
     val ws = StandaloneFakeWSClient(InternalServerError)
     val api = new WsFooApiClient(ws, baseUrl, accessToken)
     recoverToSucceededIf[FooApiClientException] {
@@ -84,7 +95,7 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
     }
   }
 
-  test("addBar: regular case") {
+  test("addBar: normal flow") {
     val ws = StandaloneFakeWSClient {
       case request@POST(url"http://host/bars") =>
         request.headers should contain("Authorization" -> Seq(s"Bearer $accessToken"))
@@ -97,7 +108,7 @@ class WsFooApiClientTest extends AsyncFunSuite with BeforeAndAfterAll with Match
     }
   }
 
-  test("addBar: unexpected code") {
+  test("addBar: gracefully handle unexpected status") {
     val ws = StandaloneFakeWSClient(InternalServerError)
     val api = new WsFooApiClient(ws, baseUrl, accessToken)
     recoverToSucceededIf[FooApiClientException] {
